@@ -1,0 +1,25 @@
+BORO MARINOV
+Web Developer & Creative Freelancer
+Burgas, Bulgaria
+
+PROFILE
+Computer Systems and Technologies student with a background in Applied Programming. Interested in web development, UI/UX and modern website design.
+
+SKILLS & INTERESTS
+HTML, CSS, JavaScript, Bootstrap, responsive web design, UI design, Git / GitHub, basic web development
+
+EXPERIENCE
+Seasonal Video Surveillance Assistant | Fraport / Burgas Airport | Seasonal position
+Worked in a video surveillance environment, monitoring security cameras and working rotating day/night shifts.
+
+EDUCATION
+Computer Systems and Technologies | Burgas Free University / BSU Burgas | Currently studying
+Applied Programming | Completed secondary education
+
+PERSONAL & CONCEPT PROJECTS
+Glowie — E-commerce Website | HTML, CSS, JavaScript, Bootstrap
+Personal Portfolio | HTML, CSS, JavaScript
+Business Landing Page | HTML, CSS, JavaScript
+Discord / Community Website | HTML, CSS, JavaScript
+
+This CV was generated from the information on Boro's portfolio.
