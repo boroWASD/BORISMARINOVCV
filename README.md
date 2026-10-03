@@ -18,7 +18,8 @@ The dashboard is intentionally private and only intended for the site owner.
 1. Copy `config.example.js` to `config.js`.
 2. Set a strong admin password and hash it with SHA-256.
 3. Update `window.BORO_ADMIN_CONFIG.passwordHash` in `config.js` with the generated hex digest.
-4. Open `/admin.html` and sign in with the matching password.
+4. Optionally set `window.BORO_ADMIN_CONFIG.contact.notificationEndpoint` to a secure backend endpoint for email notifications when a visitor submits the contact form.
+5. Open `/admin.html` and sign in with the matching password.
 
 Important: `config.js` is ignored by Git, so it stays local and does not get pushed to the repository.
 

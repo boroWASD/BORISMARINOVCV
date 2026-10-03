@@ -1,3 +1,7 @@
 window.BORO_ADMIN_CONFIG = {
-  passwordHash: "REPLACE_WITH_SHA256_HEX_OF_YOUR_PASSWORD"
+  passwordHash: "REPLACE_WITH_SHA256_HEX_OF_YOUR_PASSWORD",
+  contact: {
+    emailTo: "boris13marinov37@gmail.com",
+    notificationEndpoint: ""
+  }
 };
