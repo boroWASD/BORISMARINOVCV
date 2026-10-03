@@ -7,7 +7,209 @@ const dialog = document.querySelector("#project-dialog");
 const yearTarget = document.querySelector("#year");
 const downloadCvButton = document.querySelector("#download-cv");
 const printCvButton = document.querySelector("#print-cv");
+const contactForm = document.querySelector("#contact-form");
+const STORAGE_KEYS = {
+  analytics: "boro-portfolio-analytics",
+  submissions: "boro-portfolio-contact-submissions",
+  adminAuth: "boro-admin-auth"
+};
 let toastTimer;
+
+function hashString(value) {
+  if (!window.crypto || !window.crypto.subtle) return Promise.resolve("");
+  return window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)).then((digest) =>
+    Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("")
+  );
+}
+
+function getCurrentPage() {
+  const path = location.pathname.replace(/^\/+/, "");
+  return path === "" ? "index.html" : path;
+}
+
+function getTrafficSource(referrer) {
+  if (!referrer) return "Direct";
+  try {
+    const parsed = new URL(referrer);
+    const domain = parsed.hostname.replace(/^www\./, "");
+    if (domain === location.hostname) return "Direct";
+    if (domain.includes("google")) return "Google";
+    if (domain.includes("github")) return "GitHub";
+    if (domain.includes("linkedin") || domain.includes("instagram") || domain.includes("facebook") || domain.includes("twitter") || domain.includes("x.com")) return "Social";
+    return domain;
+  } catch {
+    return "Direct";
+  }
+}
+
+function getUtmData() {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    utmSource: params.get("utm_source") || "",
+    utmMedium: params.get("utm_medium") || "",
+    utmCampaign: params.get("utm_campaign") || "",
+    utmTerm: params.get("utm_term") || "",
+    utmContent: params.get("utm_content") || ""
+  };
+}
+
+function getDeviceType() {
+  const width = window.innerWidth;
+  if (width >= 1024) return "Desktop";
+  if (width >= 768) return "Tablet";
+  return "Mobile";
+}
+
+function getBrowser() {
+  const userAgent = navigator.userAgent;
+  if (/Edg\//.test(userAgent)) return "Edge";
+  if (/Chrome\//.test(userAgent)) return "Chrome";
+  if (/Firefox\//.test(userAgent)) return "Firefox";
+  if (/Safari\//.test(userAgent) && !/Chrome\//.test(userAgent)) return "Safari";
+  return "Other";
+}
+
+function getOperatingSystem() {
+  const userAgent = navigator.userAgent;
+  if (/Windows/.test(userAgent)) return "Windows";
+  if (/Macintosh/.test(userAgent)) return "macOS";
+  if (/Android/.test(userAgent)) return "Android";
+  if (/iPhone|iPad|iPod/.test(userAgent)) return "iOS";
+  if (/Linux/.test(userAgent)) return "Linux";
+  return "Other";
+}
+
+function trackAnalyticsEvent(eventType, payload = {}) {
+  const sessionId = sessionStorage.getItem("boro-session-id") || "guest-session";
+  const visitorId = localStorage.getItem("boro-visitor-id") || (() => {
+    const newId = `visitor-${Math.random().toString(16).slice(2, 10)}`;
+    localStorage.setItem("boro-visitor-id", newId);
+    return newId;
+  })();
+
+  const entry = {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    timestamp: new Date().toISOString(),
+    eventType,
+    page: getCurrentPage(),
+    visitorId,
+    sessionId,
+    source: getTrafficSource(document.referrer),
+    referrer: document.referrer || "Direct",
+    device: getDeviceType(),
+    browser: getBrowser(),
+    os: getOperatingSystem(),
+    screen: `${window.innerWidth}x${window.innerHeight}`,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown",
+    ...getUtmData(),
+    ...payload
+  };
+
+  const records = JSON.parse(localStorage.getItem(STORAGE_KEYS.analytics) || "[]");
+  records.push(entry);
+  localStorage.setItem(STORAGE_KEYS.analytics, JSON.stringify(records.slice(-5000)));
+}
+
+function filterAnalyticsData(records, range) {
+  if (!records.length) return [];
+  const startTimes = {
+    today: Date.now() - (24 * 60 * 60 * 1000),
+    "7days": Date.now() - (7 * 24 * 60 * 60 * 1000),
+    "30days": Date.now() - (30 * 24 * 60 * 60 * 1000),
+    all: 0
+  };
+
+  return records.filter((entry) => {
+    if (!entry.timestamp) return true;
+    return new Date(entry.timestamp).getTime() >= startTimes[range];
+  });
+}
+
+function tallyEntries(entries, key) {
+  return entries.reduce((accumulator, entry) => {
+    const label = entry[key] || "Unknown";
+    accumulator[label] = (accumulator[label] || 0) + 1;
+    return accumulator;
+  }, {});
+}
+
+function renderList(target, map, limit = 5) {
+  if (!target) return;
+  const topEntries = Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, limit);
+  target.innerHTML = topEntries.length ? topEntries.map(([label, count]) => `
+    <li><span>${label}</span><strong>${count}</strong></li>
+  `).join("") : "<li><span>No data yet</span><strong>0</strong></li>";
+}
+
+function formatTimestamp(timestamp) {
+  if (!timestamp) return "-";
+  return new Date(timestamp).toLocaleString([], { dateStyle: "short", timeStyle: "short" });
+}
+
+function renderAdminDashboard() {
+  const rows = JSON.parse(localStorage.getItem(STORAGE_KEYS.analytics) || "[]");
+  const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || "[]");
+  const selectedRange = document.querySelector(".filter-toggle.is-active")?.dataset.range || "today";
+  const filteredRows = filterAnalyticsData(rows, selectedRange);
+  const totalVisits = filteredRows.length;
+  const uniqueVisitors = new Set(filteredRows.map((entry) => entry.visitorId)).size;
+  const sourceMap = tallyEntries(filteredRows, "source");
+  const pageMap = tallyEntries(filteredRows.filter((entry) => entry.page), "page");
+  const projectMap = tallyEntries(filteredRows.filter((entry) => entry.project), "project");
+  const deviceMap = tallyEntries(filteredRows, "device");
+
+  const totalVisitsEl = document.querySelector("#stat-total-visits");
+  const uniqueVisitorsEl = document.querySelector("#stat-unique-visitors");
+  const todayVisitsEl = document.querySelector("#stat-visits-today");
+  const monthVisitsEl = document.querySelector("#stat-visits-month");
+
+  if (totalVisitsEl) totalVisitsEl.textContent = totalVisits.toLocaleString();
+  if (uniqueVisitorsEl) uniqueVisitorsEl.textContent = uniqueVisitors.toLocaleString();
+  if (todayVisitsEl) todayVisitsEl.textContent = rows.filter((entry) => new Date(entry.timestamp).getTime() >= Date.now() - (24 * 60 * 60 * 1000)).length.toLocaleString();
+  if (monthVisitsEl) monthVisitsEl.textContent = rows.filter((entry) => new Date(entry.timestamp).getTime() >= Date.now() - (30 * 24 * 60 * 60 * 1000)).length.toLocaleString();
+
+  renderList(document.querySelector("#source-list"), sourceMap, 5);
+  renderList(document.querySelector("#page-list"), pageMap, 5);
+  renderList(document.querySelector("#project-list"), projectMap, 5);
+  renderList(document.querySelector("#device-list"), deviceMap, 5);
+
+  const activityTable = document.querySelector("#activity-table-body");
+  if (activityTable) {
+    activityTable.innerHTML = filteredRows.slice(-10).reverse().map((entry) => `
+      <tr>
+        <td>${formatTimestamp(entry.timestamp)}</td>
+        <td>${entry.page || "-"}</td>
+        <td>${entry.eventType || "event"}</td>
+        <td>${entry.device || "-"}</td>
+        <td>${entry.source || "Direct"}</td>
+      </tr>
+    `).join("") || '<tr><td colspan="5">No activity yet.</td></tr>';
+  }
+
+  const submissionTable = document.querySelector("#submission-table-body");
+  if (submissionTable) {
+    submissionTable.innerHTML = submissions.slice(0, 8).map((submission) => `
+      <tr>
+        <td>${submission.name || "-"}</td>
+        <td>${submission.email || "-"}</td>
+        <td>${submission.projectType || "-"}</td>
+        <td class="message-cell">${submission.message || "-"}</td>
+        <td>${formatTimestamp(submission.createdAt)}</td>
+      </tr>
+    `).join("") || '<tr><td colspan="5">No contact submissions yet.</td></tr>';
+  }
+}
+
+function showAdminDashboard() {
+  const loginPanel = document.querySelector("#admin-login-panel");
+  const dashboard = document.querySelector("#admin-dashboard");
+  if (loginPanel) loginPanel.classList.add("hidden");
+  if (dashboard) {
+    dashboard.classList.remove("hidden");
+    dashboard.classList.add("is-visible");
+    renderAdminDashboard();
+  }
+}
 
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
@@ -125,12 +327,14 @@ if (downloadCvButton) {
     downloadLink.click();
     downloadLink.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    trackAnalyticsEvent("click", { label: "download-cv" });
     showToast("Your print-ready CV has been downloaded.");
   });
 }
 
 if (printCvButton) {
   printCvButton.addEventListener("click", () => {
+    trackAnalyticsEvent("click", { label: "print-cv" });
     window.print();
   });
 }
@@ -182,6 +386,7 @@ if (projectButtons.length && dialog) {
           return tag;
         }));
       }
+      trackAnalyticsEvent("click", { label: `project-${button.dataset.project}`, project: button.dataset.project });
       dialog.showModal();
     });
   });
@@ -227,13 +432,108 @@ if (form) {
       fields.find((field) => !field.input.checkValidity())?.input.focus();
       return;
     }
+
+    const submission = {
+      name: document.querySelector("#name").value.trim(),
+      email: document.querySelector("#email").value.trim(),
+      projectType: document.querySelector("#project-type").value,
+      message: document.querySelector("#message").value.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    const submissions = JSON.parse(localStorage.getItem(STORAGE_KEYS.submissions) || "[]");
+    submissions.unshift(submission);
+    localStorage.setItem(STORAGE_KEYS.submissions, JSON.stringify(submissions.slice(0, 200)));
+
     status.classList.add("success");
-    status.textContent = "Thanks, your details are valid. This demo does not send messages or store your information.";
-    showToast("Form validated. No message was sent.");
+    status.textContent = "Thanks — your message has been saved locally for the owner dashboard.";
+    trackAnalyticsEvent("contact_submission", { label: "contact-form-submit", project: submission.projectType, email: submission.email });
+    showToast("Message saved locally for the owner dashboard.");
     form.reset();
     fields.forEach((field) => {
       field.input.removeAttribute("aria-invalid");
       field.error.textContent = "";
     });
   });
+}
+
+document.addEventListener("click", (event) => {
+  const trigger = event.target.closest("[data-track]");
+  if (trigger) {
+    trackAnalyticsEvent("click", { label: trigger.dataset.track, project: trigger.dataset.project || "" });
+    return;
+  }
+
+  const projectButton = event.target.closest(".project-view");
+  if (projectButton) {
+    trackAnalyticsEvent("click", { label: `project-${projectButton.dataset.project}`, project: projectButton.dataset.project });
+  }
+});
+
+if (document.body.dataset.page === "admin") {
+  const loginForm = document.querySelector("#admin-login-form");
+  const loginStatus = document.querySelector("#admin-auth-status");
+  const dashboard = document.querySelector("#admin-dashboard");
+  const filters = [...document.querySelectorAll(".filter-toggle")];
+
+  const showLogin = () => {
+    const loginPanel = document.querySelector("#admin-login-panel");
+    loginPanel?.classList.remove("hidden");
+    dashboard?.classList.add("hidden");
+  };
+
+  const isAuthenticated = () => sessionStorage.getItem(STORAGE_KEYS.adminAuth) === "true";
+
+  if (isAuthenticated()) {
+    showAdminDashboard();
+  } else {
+    showLogin();
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const passwordInput = document.querySelector("#admin-password");
+      const configuredHash = (window.BORO_ADMIN_CONFIG && window.BORO_ADMIN_CONFIG.passwordHash || "").trim();
+      if (!configuredHash || configuredHash === "REPLACE_WITH_SHA256_HEX_OF_YOUR_PASSWORD") {
+        loginStatus.textContent = "Add a valid password hash to config.js to enable owner access.";
+        return;
+      }
+
+      const password = passwordInput.value.trim();
+      const candidateHash = await hashString(password);
+      if (candidateHash && candidateHash.toLowerCase() === configuredHash.toLowerCase()) {
+        sessionStorage.setItem(STORAGE_KEYS.adminAuth, "true");
+        showAdminDashboard();
+        loginStatus.textContent = "";
+        passwordInput.value = "";
+      } else {
+        loginStatus.textContent = "Incorrect password. Please try again.";
+      }
+    });
+  }
+
+  filters.forEach((button) => {
+    button.addEventListener("click", () => {
+      filters.forEach((filterButton) => filterButton.classList.toggle("is-active", filterButton === button));
+      renderAdminDashboard();
+    });
+  });
+
+  const logoutButton = document.querySelector("#admin-logout");
+  if (logoutButton) {
+    logoutButton.addEventListener("click", () => {
+      sessionStorage.removeItem(STORAGE_KEYS.adminAuth);
+      showLogin();
+      if (loginStatus) loginStatus.textContent = "You have been logged out.";
+    });
+  }
+}
+
+if (!sessionStorage.getItem("boro-session-id")) {
+  sessionStorage.setItem("boro-session-id", `session-${Date.now()}`);
+}
+
+if (!window.location.pathname.includes("admin.html")) {
+  trackAnalyticsEvent("page_view", { label: getCurrentPage(), page: getCurrentPage() });
 }

@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#090a0d">
+    <meta name="description" content="Private analytics dashboard for Boro's portfolio website.">
+    <title>Boro | Owner Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script src="config.js" defer></script>
+    <script src="script.js" defer></script>
+  </head>
+  <body class="admin-page" data-page="admin">
+    <div class="admin-shell">
+      <main class="admin-panel">
+        <section class="admin-auth-panel" id="admin-login-panel">
+          <div class="admin-auth-card">
+            <p class="eyebrow"><span class="status-dot"></span> Private owner dashboard</p>
+            <h1>Admin access</h1>
+            <p class="admin-auth-copy">This dashboard is restricted to the site owner and stores minimal privacy-conscious analytics data.</p>
+            <form id="admin-login-form" class="admin-login-form" novalidate>
+              <label for="admin-password">Password</label>
+              <input id="admin-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your admin password" required>
+              <button class="button button-primary" type="submit">Unlock dashboard</button>
+            </form>
+            <p class="admin-auth-status" id="admin-auth-status" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section class="admin-dashboard hidden" id="admin-dashboard" aria-live="polite">
+          <header class="admin-header">
+            <div>
+              <p class="eyebrow"><span class="status-dot"></span> Boro Analytics</p>
+              <h2>Owner dashboard</h2>
+            </div>
+            <div class="admin-header-actions">
+              <div class="filter-group" aria-label="Analytics date range filter">
+                <button class="filter-toggle is-active" type="button" data-range="today">Today</button>
+                <button class="filter-toggle" type="button" data-range="7days">7 days</button>
+                <button class="filter-toggle" type="button" data-range="30days">30 days</button>
+                <button class="filter-toggle" type="button" data-range="all">All time</button>
+              </div>
+              <button class="button button-quiet" id="admin-logout" type="button">Log out</button>
+            </div>
+          </header>
+
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span class="stat-label">Total visits</span>
+              <strong id="stat-total-visits">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Unique visitors</span>
+              <strong id="stat-unique-visitors">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Visits today</span>
+              <strong id="stat-visits-today">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">This month</span>
+              <strong id="stat-visits-month">0</strong>
+            </article>
+          </div>
+
+          <div class="dashboard-grid">
+            <section class="panel">
+              <div class="panel-header"><h3>Traffic sources</h3></div>
+              <ul class="detail-list" id="source-list"></ul>
+            </section>
+            <section class="panel">
+              <div class="panel-header"><h3>Popular pages</h3></div>
+              <ul class="detail-list" id="page-list"></ul>
+            </section>
+            <section class="panel">
+              <div class="panel-header"><h3>Popular projects</h3></div>
+              <ul class="detail-list" id="project-list"></ul>
+            </section>
+            <section class="panel">
+              <div class="panel-header"><h3>Devices</h3></div>
+              <ul class="detail-list" id="device-list"></ul>
+            </section>
+            <section class="panel panel-wide">
+              <div class="panel-header"><h3>Recent activity</h3></div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Page</th>
+                      <th>Event</th>
+                      <th>Device</th>
+                      <th>Source</th>
+                    </tr>
+                  </thead>
+                  <tbody id="activity-table-body"></tbody>
+                </table>
+              </div>
+            </section>
+            <section class="panel panel-wide">
+              <div class="panel-header"><h3>Contact submissions</h3></div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Project type</th>
+                      <th>Message</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody id="submission-table-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
